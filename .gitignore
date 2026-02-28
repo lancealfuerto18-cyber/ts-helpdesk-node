@@ -1,10 +1,9 @@
 # Dependencies
 node_modules/
 
-# Environment secrets
+# Secrets
 .env
-credentials.json
-*.json
+ts-helpdesk-488807-7af246ea8579.json
 
 # Logs
 npm-debug.log*
