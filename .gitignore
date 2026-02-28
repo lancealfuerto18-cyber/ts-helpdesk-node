@@ -1,3 +1,16 @@
+# Dependencies
 node_modules/
-credentials.json
+
+# Environment secrets
 .env
+credentials.json
+*.json
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# OS files
+.DS_Store
+Thumbs.db
