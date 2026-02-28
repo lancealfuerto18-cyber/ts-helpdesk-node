@@ -6,7 +6,17 @@ const { google } = require("googleapis");
 const app = express();
 app.use(express.json());
 
+// Serve static UI files
+app.use(express.static("public"));
+
+// Serve homepage UI
+app.get("/", (req, res) => {
+    res.sendFile(__dirname + "/public/index.html");
+});
+
+// Google Sheets Reader
 async function readSheet() {
+
     const credentials = JSON.parse(process.env.GOOGLE_APPLICATION_CREDENTIALS);
 
     const auth = new google.auth.GoogleAuth({
@@ -31,14 +41,12 @@ async function readSheet() {
     return response.data.values;
 }
 
-app.get("/", async (req, res) => {
-    try {
+// Optional API endpoint (for future frontend use 😈🔥)
+app.get("/tickets", async (req,res)=>{
+    try{
         const data = await readSheet();
-        res.json({
-            status: "Helpdesk running 😭🔥",
-            data
-        });
-    } catch (err) {
+        res.json(data);
+    }catch(err){
         res.status(500).send(err.message);
     }
 });
@@ -46,5 +54,5 @@ app.get("/", async (req, res) => {
 const PORT = process.env.PORT || 3000;
 
 app.listen(PORT, () => {
-    console.log(`Server running on port ${PORT}`);
+    console.log("Helpdesk running on port " + PORT);
 });
