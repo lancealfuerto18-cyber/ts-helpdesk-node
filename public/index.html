@@ -1,87 +1,396 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>TS Internal Helpdesk</title>
 
-    <style>
+<meta charset="UTF-8">
+<title>TS Internal Helpdesk</title>
 
-        body{
-            font-family: Arial;
-            background:#f4f6fb;
-            margin:0;
-            display:flex;
-            justify-content:center;
-            align-items:center;
-            height:100vh;
-        }
+<style>
 
-        .container{
-            width:800px;
-            background:white;
-            padding:30px;
-            border-radius:15px;
-            box-shadow:0px 5px 20px rgba(0,0,0,0.1);
-        }
+body{
+margin:0;
+font-family:Calibri;
+background:#f4f6fb;
+display:flex;
+justify-content:center;
+align-items:center;
+height:100vh;
+}
 
-        h1{
-            color:#B8860B;
-        }
+.chat{
+width:420px;
+height:650px;
+background:white;
+border-radius:16px;
+box-shadow:0 8px 24px rgba(0,0,0,.1);
+display:flex;
+flex-direction:column;
+}
 
-        button{
-            background:#B8860B;
-            color:white;
-            border:none;
-            padding:10px 15px;
-            border-radius:8px;
-            cursor:pointer;
-            margin-bottom:20px;
-        }
+/* HEADER CHAT AREA */
 
-        .ticket{
-            border-bottom:1px solid #eee;
-            padding:10px 0;
-        }
+.header{
+background:linear-gradient(135deg,#0F172A,#2563EB);
+color:white;
+padding:22px;
+text-align:center;
+font-size:22px;
+font-weight:bold;
+border-radius:16px 16px 0 0;
+}
 
-    </style>
+/* CHAT MESSAGES */
+
+.chatbox{
+flex:1;
+padding:16px;
+overflow-y:auto;
+display:flex;
+flex-direction:column;
+gap:10px;
+}
+
+.msg{
+max-width:80%;
+padding:12px;
+border-radius:10px;
+}
+
+.user{
+background:#1E293B;
+color:white;
+align-self:flex-end;
+}
+
+.bot{
+background:#f1f5f9;
+align-self:flex-start;
+}
+
+/* BUTTONS */
+
+button{
+padding:10px 14px;
+border:none;
+background:#2563EB;
+color:white;
+border-radius:10px;
+margin:4px;
+cursor:pointer;
+}
+
+.input-area{
+display:flex;
+border-top:1px solid #ddd;
+}
+
+textarea{
+flex:1;
+padding:14px;
+resize:none;
+border:none;
+outline:none;
+}
+
+.timestamp{
+font-size:10px;
+color:#94A3B8;
+margin-top:4px;
+}
+
+/* DASHBOARD */
+
+#dashboard{
+flex:1;
+display:flex;
+flex-direction:column;
+justify-content:center;
+align-items:center;
+gap:25px;
+padding:40px;
+text-align:center;
+}
+
+</style>
+
 </head>
 
 <body>
 
-<div class="container">
+<div class="chat">
 
-    <h1>Chat with TS Internal HelpDesk</h1>
-    <p>This channel is for internal requests from all departments.</p>
+<!-- DASHBOARD LANDING SCREEN -->
+<div id="dashboard">
 
-    <button onclick="loadTickets()">Refresh Tickets</button>
+<h1 style="
+color:#B8860B;
+font-size:40px;
+margin:0;
+font-weight:700;
+">
+Chat with TS Internal HelpDesk
+</h1>
 
-    <div id="tickets"></div>
+<p style="
+color:black;
+font-size:16px;
+max-width:320px;
+line-height:1.6;
+margin-top:-10px;
+">
+This channel is for internal requests from all departments and sections of Human Capital.
+</p>
+
+<button id="continueBtn"
+onclick="showOptions()"
+style="
+background:#B8860B;
+color:white;
+padding:12px 22px;
+border:none;
+border-radius:10px;
+font-weight:bold;
+font-size:16px;
+">
+Click here to continue
+</button>
+
+<div id="options"
+style="display:none;flex-direction:column;gap:12px;">
+
+<button onclick="startNewTicket()"
+style="background:#2563EB;">
+Submit New Ticket
+</button>
+
+<button onclick="checkStatus()"
+style="background:#0F172A;">
+Verify Ticket Status
+</button>
+
+</div>
+
+</div>
+
+<!-- CHAT AREA -->
+<div id="chatArea" style="display:none;flex-direction:column;height:100%;">
+
+<div class="header">TS Internal Helpdesk</div>
+
+<div id="chatbox" class="chatbox"></div>
+
+<div class="input-area">
+
+<textarea id="msg"
+rows="3"
+placeholder="Type message... (Shift+Enter multiline)"></textarea>
+
+<button onclick="sendMessage()">Send</button>
+<button onclick="restartChat()" style="background:#22C55E">New Ticket</button>
+
+</div>
+
+</div>
 
 </div>
 
 <script>
 
-async function loadTickets(){
+/* ===== CONFIG ===== */
 
-    const res = await fetch("/tickets");
-    const data = await res.json();
+const WEB_APP_URL="https://script.google.com/macros/s/AKfycbzsjxgk-0zIHO1M6e1L0Obi4ljjC6kNBHrpQs9zzrh6beLpjywKlj8nMg-waIClKOXC3w/exec";
+const TOKEN="TS2026SECURE";
 
-    let html = "";
+let session=Date.now().toString();
+let step="start";
 
-    data.forEach(ticket=>{
-        html += `
-        <div class="ticket">
-            <b>Ticket ID:</b> ${ticket[0] || ""} <br>
-            <b>Name:</b> ${ticket[2] || ""} <br>
-            <b>Status:</b> ${ticket[10] || ""} <br>
-            <b>Message:</b> ${ticket[11] || ""} <br>
-        </div>
-        `;
-    });
+const chat=document.getElementById("chatbox");
+const input=document.getElementById("msg");
 
-    document.getElementById("tickets").innerHTML = html;
+/* ===== DASHBOARD ===== */
+
+function showOptions(){
+
+document.getElementById("options").style.display="flex";
+document.getElementById("continueBtn").style.display="none";
+
 }
 
-loadTickets();
+function startNewTicket(){
+
+document.getElementById("dashboard").style.display="none";
+document.getElementById("chatArea").style.display="flex";
+
+step="start";
+startConversation();
+
+}
+
+function checkStatus(){
+
+document.getElementById("dashboard").style.display="none";
+document.getElementById("chatArea").style.display="flex";
+
+step="check_ticket";
+addMsg("Enter Ticket ID to check status","bot");
+
+}
+
+/* ===== CHAT UI ===== */
+
+function addMsg(text,type){
+
+let wrapper=document.createElement("div");
+wrapper.style.alignSelf=type==="user"?"flex-end":"flex-start";
+
+let msg=document.createElement("div");
+msg.className="msg "+type;
+msg.innerText=text;
+
+let time=document.createElement("div");
+time.className="timestamp";
+time.innerText=new Date().toLocaleTimeString([],{
+hour:"2-digit",
+minute:"2-digit"
+});
+
+wrapper.appendChild(msg);
+wrapper.appendChild(time);
+
+chat.appendChild(wrapper);
+chat.scrollTop=chat.scrollHeight;
+
+}
+
+function renderBot(text){
+
+if(text.includes("|")){
+renderButtons(text);
+return;
+}
+
+addMsg(text,"bot");
+
+}
+
+function renderButtons(text){
+
+let parts=text.split("|");
+
+addMsg(parts[0],"bot");
+
+parts.slice(1).forEach(opt=>{
+
+let btn=document.createElement("button");
+btn.innerText=opt;
+
+btn.onclick=()=>sendMessageWithText(opt);
+
+chat.appendChild(btn);
+
+});
+
+}
+
+/* ===== START ===== */
+
+async function startConversation(){
+
+let form=new URLSearchParams();
+form.append("message","start");
+form.append("step","start");
+form.append("session",session);
+form.append("token",TOKEN);
+
+let res=await fetch(WEB_APP_URL,{method:"POST",body:form});
+let data=await res.json();
+
+step=data.step;
+
+/* 🔥 If user is checking ticket status */
+if(step==="check_ticket_result"){
+checkTicketLatest(message);
+return;
+}
+
+renderBot(data.reply);
+
+}
+
+/* ===== SEND ===== */
+
+async function sendMessage(){
+
+let message=input.value.trim();
+if(!message) return;
+
+addMsg(message,"user");
+input.value="";
+
+let form=new URLSearchParams();
+form.append("message",message);
+form.append("step",step);
+form.append("session",session);
+form.append("token",TOKEN);
+
+let res=await fetch(WEB_APP_URL,{method:"POST",body:form});
+let data=await res.json();
+
+step=data.step;
+renderBot(data.reply);
+
+}
+
+function sendMessageWithText(text){
+input.value=text;
+sendMessage();
+}
+
+function restartChat(){
+
+session=Date.now().toString();
+step="start";
+chat.innerHTML="";
+startNewTicket();
+
+}
+
+async function checkTicketLatest(ticketId){
+
+try{
+
+let url = WEB_APP_URL + "?ticket=" + encodeURIComponent(ticketId);
+
+let res = await fetch(url);
+let data = await res.json();
+
+if(data.found){
+addMsg("Status: " + data.status,"bot");
+addMsg("TS Message: " + data.message,"bot");
+}
+else{
+addMsg("Ticket not found","bot");
+}
+
+}catch(err){
+addMsg("Error fetching latest ticket data","bot");
+}
+
+}
+
+window.onload=()=>{};
+
+/* ===== ENTER KEY TO SEND MESSAGE ===== */
+
+input.addEventListener("keydown", function(e){
+
+    // If Enter is pressed WITHOUT Shift → send message
+    if(e.key === "Enter" && !e.shiftKey){
+        e.preventDefault();
+        sendMessage();
+    }
+
+});
 
 </script>
 
