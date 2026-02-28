@@ -1,15 +1,18 @@
 require("dotenv").config();
 
+const express = require("express");
 const { google } = require("googleapis");
 
-async function readSheet() {
+const app = express();
+app.use(express.json());
 
+async function readSheet() {
     const credentials = JSON.parse(process.env.GOOGLE_APPLICATION_CREDENTIALS);
 
-const auth = new google.auth.GoogleAuth({
-    credentials,
-    scopes: ["https://www.googleapis.com/auth/spreadsheets"]
-});
+    const auth = new google.auth.GoogleAuth({
+        credentials,
+        scopes: ["https://www.googleapis.com/auth/spreadsheets"]
+    });
 
     const client = await auth.getClient();
 
@@ -22,11 +25,26 @@ const auth = new google.auth.GoogleAuth({
 
     const response = await sheets.spreadsheets.values.get({
         spreadsheetId,
-        range: "Sheet1!A:Z"
+        range: "'Form Responses 1'!A:Z"
     });
 
-    console.log("✅ Sheet Data:");
-    console.log(response.data.values);
+    return response.data.values;
 }
 
-readSheet();
+app.get("/", async (req, res) => {
+    try {
+        const data = await readSheet();
+        res.json({
+            status: "Helpdesk running 😭🔥",
+            data
+        });
+    } catch (err) {
+        res.status(500).send(err.message);
+    }
+});
+
+const PORT = process.env.PORT || 3000;
+
+app.listen(PORT, () => {
+    console.log(`Server running on port ${PORT}`);
+});
